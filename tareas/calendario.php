@@ -56,7 +56,6 @@ ob_start();
 </div>
 </div>
 
-<!-- MODAL -->
 <div id="modalTarea" class="modal-custom">
     <div class="modal-content-custom">
         <button onclick="cerrarModal()" class="btn btn-danger btn-sm float-end">X</button>
@@ -70,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
 let tooltip = document.getElementById('tooltip');
 let calendarEl = document.getElementById('calendar');
 
-let calendar = new FullCalendar.Calendar(calendarEl, {
+window.calendar = new FullCalendar.Calendar(calendarEl, {
 
     initialView: 'dayGridMonth',
     locale: 'es',
@@ -115,12 +114,8 @@ let calendar = new FullCalendar.Calendar(calendarEl, {
     },
 
     eventClick: function(info) {
-
         info.jsEvent.preventDefault();
-
-        let tarea_id = info.event.id;
-
-        abrirModal(tarea_id);
+        abrirModal(info.event.id);
     }
 
 });
@@ -129,18 +124,13 @@ calendar.render();
 
 });
 
-// 🔥 MODAL AJAX
 function abrirModal(id){
-
     fetch('/sistema/tareas/ver_tarea_modal.php?id='+id)
     .then(r => r.text())
     .then(html => {
-
         document.getElementById('contenidoModal').innerHTML = html;
         document.getElementById('modalTarea').style.display = 'block';
-
     });
-
 }
 
 function cerrarModal(){
