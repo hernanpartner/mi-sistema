@@ -1,0 +1,26 @@
+eh subido un documento word ahi esta todo mi sistemas quiero que lo analises bien y te lo aprendas muy bien las direcciones los codigo
+
+porque quiero que vayamos corregiendo errores que eh visto:
+
+- en un anterior chat estabamos arreglando el historial_global porque no guardaba bien la columna servicio solo tenia que modificar guardar_reasignacion.php y con eso se solucionaba ese error favor continuar con eso.
+
+REGLAS IMPORTANTES (MUY IMPORTANTE RESPETAR):
+
+1. Enséñame SIEMPRE indicando:
+
+   * ubicación exacta del archivo (ej: sistema/tareas/index.php)
+ 
+2. Si es mejor, dame el archivo COMPLETO listo para copiar y reemplazar TODO.
+
+3. NO expliques de forma teórica larga, ve directo a lo práctico.
+
+4. NO asumas archivos que no existen en mi sistema.
+
+5. SIEMPRE respeta la estructura que ya tengo.
+
+6. Evita soluciones complejas si se puede hacer simple.
+
+7. Todo debe funcionar sin errores al copiar y pegar.
+
+instruccion:
+Primero analiza el documento que subiré aprendetelo bien todo el codigo para que me guies segun mi codigo y las ubicaciones, y luego guíame paso a paso para mejorar respetando TODO mi sistema actual porque la estructura actual esta bien solo quiero hacer modificaciones de pequeñas cosas no arruinando lo que ya se avanzo. hacer el paso de guardar_reasignacion.php
