@@ -99,54 +99,45 @@ function getPrioridades(){
 
 let calendar = new FullCalendar.Calendar(calendarEl, {
 
-    // 🔥 VISTA ESTABLE
-    initialView: 'dayGridMonth',
+initialView: 'dayGridMonth',
+locale: 'es',
 
-    locale: 'es',
+headerToolbar: {
+    left: 'prev,next today',
+    center: 'title',
+    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+},
 
-    headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay'
-    },
+events: function(fetchInfo, successCallback, failureCallback){
 
-    events: function(fetchInfo, successCallback, failureCallback){
+    fetch('/sistema/tareas/eventos.php')
+    .then(r => r.json())
+    .then(data => {
 
-        fetch('/sistema/tareas/eventos.php')
-        .then(r => r.json())
-        .then(data => {
+        let estados = getEstados();
+        let prioridades = getPrioridades();
 
-            console.log("EVENTOS:", data); // 🔥 DEBUG
-
-            let estados = getEstados();
-            let prioridades = getPrioridades();
-
-            let filtrados = data.filter(e => {
-                return estados.includes(e.extendedProps.estado) &&
-                       prioridades.includes(e.extendedProps.prioridad);
-            });
-
-            successCallback(filtrados);
-
-        })
-        .catch(err => {
-            console.error("ERROR:", err);
-            failureCallback(err);
+        let filtrados = data.filter(e => {
+            return estados.includes(e.extendedProps.estado) &&
+                   prioridades.includes(e.extendedProps.prioridad);
         });
 
-    },
+        successCallback(filtrados);
 
-    eventClick: function(info) {
-        info.jsEvent.preventDefault();
+    })
+    .catch(err => {
+        console.error(err);
+        failureCallback(err);
+    });
 
-        let servicio_id = info.event.extendedProps.servicio_id;
+},
 
-        if(servicio_id){
-            window.location.href = '/sistema/tareas/ver_servicio.php?id=' + servicio_id;
-        }
-    },
+// 🔥 TOOLTIP PROFESIONAL (ESTABLE)
+eventDidMount: function(info) {
 
-    eventMouseEnter: function(info) {
+    let tooltip = document.getElementById('tooltip');
+
+    info.el.addEventListener('mouseenter', function(e) {
 
         let props = info.event.extendedProps;
 
@@ -158,11 +149,24 @@ let calendar = new FullCalendar.Calendar(calendarEl, {
         "Fecha: " + props.fecha;
 
         tooltip.style.display = 'block';
-    },
+    });
 
-    eventMouseLeave: function() {
+    info.el.addEventListener('mouseleave', function() {
         tooltip.style.display = 'none';
+    });
+
+},
+
+eventClick: function(info) {
+
+    info.jsEvent.preventDefault();
+
+    let servicio_id = info.event.extendedProps.servicio_id;
+
+    if(servicio_id){
+        window.location.href = '/sistema/tareas/ver_servicio.php?id=' + servicio_id + '&highlight=' + info.event.id;
     }
+}
 
 });
 

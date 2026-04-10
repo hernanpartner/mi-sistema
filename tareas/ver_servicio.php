@@ -215,3 +215,25 @@ alert('Error de conexión');
 $contenido = ob_get_clean();
 require_once __DIR__ . "/../layouts/app.php";
 ?>
+<?php if(isset($_GET['highlight'])): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+
+    let tareaId = "<?php echo $_GET['highlight']; ?>";
+
+    // 🔥 busca fila o elemento de tarea
+    let elemento = document.querySelector('[data-id="'+tareaId+'"]');
+
+    if(elemento){
+        elemento.style.background = '#fff3cd';
+        elemento.style.border = '2px solid #ffc107';
+
+        elemento.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+        });
+    }
+
+});
+</script>
+<?php endif; ?>
