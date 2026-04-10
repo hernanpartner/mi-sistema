@@ -1,9 +1,10 @@
 <?php 
 require_once "../login/Auth.php";
+require_once "../login/Permisos.php";
 require_once "../config/database.php";
 
 Auth::verificar();
-Auth::solo('ADMIN');
+Permisos::requerir('cubicaje.editar'); // 🔥 CAMBIO CLAVE
 
 $db = Database::conectar();
 
@@ -59,8 +60,6 @@ ob_start();
 </div>
 
 <script>
-
-// 🔥 EDITAR CON AJAX
 $('#formEditarProyecto').submit(function(e){
     e.preventDefault();
 
@@ -84,7 +83,6 @@ $('#formEditarProyecto').submit(function(e){
 
 });
 
-// 🔥 TOAST
 function mostrarToast(msg){
     let toast = document.createElement('div');
     toast.className = "toast align-items-center text-bg-success border-0 position-fixed bottom-0 end-0 m-3 show";
@@ -92,7 +90,6 @@ function mostrarToast(msg){
     document.body.appendChild(toast);
     setTimeout(()=>toast.remove(),3000);
 }
-
 </script>
 
 <?php

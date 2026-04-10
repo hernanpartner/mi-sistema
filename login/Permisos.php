@@ -6,9 +6,6 @@ require_once __DIR__ . "/../config/database.php";
 class Permisos
 {
 
-/* =========================
-   LISTA DE PERMISOS
-========================= */
 public static function lista()
 {
     return [
@@ -35,24 +32,22 @@ public static function lista()
         'usuarios.eliminar',
 
         // EXPORTACIONES
-        'export.ver'
+        'export.ver',
+
+        // 🔥 CUBICAJE (NUEVO)
+        'cubicaje.ver',
+        'cubicaje.crear',
+        'cubicaje.editar',
+        'cubicaje.eliminar'
     ];
 }
 
-/* =========================
-   NORMALIZAR ROL
-========================= */
 private static function rolLimpio()
 {
     $rol = Auth::rol();
-
-    // 🔥 NORMALIZAR
     return strtoupper(trim($rol));
 }
 
-/* =========================
-   PERMISOS DESDE BD
-========================= */
 private static function permisosRol($rol)
 {
     $db = Database::conectar();
@@ -69,14 +64,10 @@ private static function permisosRol($rol)
     }, $data);
 }
 
-/* =========================
-   VALIDAR PERMISO
-========================= */
 public static function puede($permiso)
 {
     $rol = self::rolLimpio();
 
-    // 🔥 ADMIN = TODO
     if ($rol === 'ADMIN') return true;
 
     $permisos = self::permisosRol($rol);
@@ -84,9 +75,6 @@ public static function puede($permiso)
     return in_array(trim($permiso), $permisos);
 }
 
-/* =========================
-   BLOQUEAR
-========================= */
 public static function requerir($permiso)
 {
     if (!self::puede($permiso)) {

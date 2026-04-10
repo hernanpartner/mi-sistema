@@ -1,13 +1,14 @@
 <?php
 require_once "../login/Auth.php";
+require_once "../login/Permisos.php";
 require_once "../config/database.php";
 
 Auth::verificar();
+Permisos::requerir('cubicaje.ver');
+
 $db = Database::conectar();
 
 $titulo = "Proyectos Cubicaje";
-
-$rol = Auth::rol();
 
 /* LISTAR */
 $proyectos = $db->query("SELECT * FROM proyectos ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -18,7 +19,7 @@ ob_start();
 <div class="card mb-3">
 <div class="card-body">
 
-<?php if($rol === 'ADMIN'): ?>
+<?php if(Permisos::puede('cubicaje.crear')): ?>
 
 <form id="formCrearProyecto" class="row g-2">
 <div class="col-md-4">
@@ -51,8 +52,8 @@ ob_start();
 <tbody id="tablaProyectos">
 
 <?php foreach($proyectos as $p): 
-    $id = (int)$p['id'];
-    $nombre = htmlspecialchars($p['nombre'], ENT_QUOTES, 'UTF-8');
+$id = (int)$p['id'];
+$nombre = htmlspecialchars($p['nombre'], ENT_QUOTES, 'UTF-8');
 ?>
 
 <tr id="fila_proyecto_<?php echo $id; ?>">
@@ -64,16 +65,16 @@ ob_start();
 
 <a href="proyecto.php?id=<?php echo $id; ?>" class="btn btn-info btn-sm">Ver</a>
 
-<?php if($rol === 'ADMIN'): ?>
-
+<?php if(Permisos::puede('cubicaje.editar')): ?>
 <a href="editar_proyecto.php?id=<?php echo $id; ?>" class="btn btn-warning btn-sm">✏️</a>
+<?php endif; ?>
 
+<?php if(Permisos::puede('cubicaje.eliminar')): ?>
 <button class="btn btn-danger btn-sm btnEliminarProyecto"
 data-id="<?php echo $id; ?>"
 data-nombre="<?php echo $nombre; ?>">
 🗑
 </button>
-
 <?php endif; ?>
 
 </td>
@@ -112,7 +113,7 @@ data-nombre="<?php echo $nombre; ?>">
 
 <script>
 
-// 🔥 CREAR PROYECTO AJAX
+// 🔥 CREAR PROYECTO (AJAX CORRECTO)
 $('#formCrearProyecto').submit(function(e){
     e.preventDefault();
 
@@ -123,41 +124,58 @@ $('#formCrearProyecto').submit(function(e){
         return;
     }
 
-    $.post('crear_proyecto.php', {nombre: nombre}, function(res){
+    $.ajax({
+        url: 'crear_proyecto.php',
+        method: 'POST',
+        data: {nombre: nombre},
+        dataType: 'json',
+        success: function(res){
 
-        if(res.ok){
+            if(res.ok){
 
-            let p = res.proyecto;
-            let nombreSafe = $('<div>').text(p.nombre).html();
+                let p = res.proyecto;
+                let nombreSafe = $('<div>').text(p.nombre).html();
 
-            let fila = `
-            <tr id="fila_proyecto_${p.id}">
-                <td>${nombreSafe}</td>
-                <td>${p.fecha}</td>
-                <td>
-                    <a href="proyecto.php?id=${p.id}" class="btn btn-info btn-sm">Ver</a>
-                    <a href="editar_proyecto.php?id=${p.id}" class="btn btn-warning btn-sm">✏️</a>
-                    <button class="btn btn-danger btn-sm btnEliminarProyecto"
-                    data-id="${p.id}"
-                    data-nombre="${nombreSafe}">
-                    🗑
-                    </button>
-                </td>
-            </tr>`;
+                let fila = `
+                <tr id="fila_proyecto_${p.id}">
+                    <td>${nombreSafe}</td>
+                    <td>${p.fecha}</td>
+                    <td>
+                        <a href="proyecto.php?id=${p.id}" class="btn btn-info btn-sm">Ver</a>
 
-            $('#tablaProyectos').prepend(fila);
-            $('#nombreProyecto').val('');
-            mostrarToast("Proyecto creado");
+                        <?php if(Permisos::puede('cubicaje.editar')): ?>
+                        <a href="editar_proyecto.php?id=${p.id}" class="btn btn-warning btn-sm">✏️</a>
+                        <?php endif; ?>
 
-        }else{
-            alert(res.error || 'Error');
+                        <?php if(Permisos::puede('cubicaje.eliminar')): ?>
+                        <button class="btn btn-danger btn-sm btnEliminarProyecto"
+                        data-id="${p.id}"
+                        data-nombre="${nombreSafe}">
+                        🗑
+                        </button>
+                        <?php endif; ?>
+
+                    </td>
+                </tr>`;
+
+                $('#tablaProyectos').prepend(fila);
+                $('#nombreProyecto').val('');
+                mostrarToast("Proyecto creado");
+
+            }else{
+                alert(res.error || 'Error');
+            }
+
+        },
+        error: function(xhr){
+            console.error(xhr.responseText);
+            alert("Error AJAX (ver consola F12)");
         }
-
-    }, 'json');
+    });
 
 });
 
-// 🔥 CLICK ELIMINAR (EVENTO DELEGADO)
+// 🔥 ELIMINAR
 let proyectoId = 0;
 
 $(document).on('click', '.btnEliminarProyecto', function(){
@@ -172,17 +190,27 @@ $(document).on('click', '.btnEliminarProyecto', function(){
 
 $('#btnEliminarProyecto').click(function(){
 
-    $.post('eliminar_proyecto.php', {id: proyectoId}, function(res){
+    $.ajax({
+        url: 'eliminar_proyecto.php',
+        method: 'POST',
+        data: {id: proyectoId},
+        dataType: 'json',
+        success: function(res){
 
-        if(res.ok){
-            $('#fila_proyecto_'+proyectoId).remove();
-            mostrarToast("Proyecto eliminado");
-            $('.modal').modal('hide');
-        }else{
-            alert(res.error || 'Error al eliminar');
+            if(res.ok){
+                $('#fila_proyecto_'+proyectoId).remove();
+                mostrarToast("Proyecto eliminado");
+                $('.modal').modal('hide');
+            }else{
+                alert(res.error || 'Error al eliminar');
+            }
+
+        },
+        error: function(xhr){
+            console.error(xhr.responseText);
+            alert("Error al eliminar");
         }
-
-    }, 'json');
+    });
 
 });
 

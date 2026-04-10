@@ -9,32 +9,19 @@ header('Content-Type: application/json');
 
 $db = Database::conectar();
 
-// 🔥 SOLO ADMIN
-Auth::solo('ADMIN');
+// 🔥 VALIDAR PERMISO (MEJOR QUE solo ADMIN)
+require_once "../login/Permisos.php";
 
-// 🔥 INICIAR SESIÓN (ya la maneja Auth pero aseguramos)
-if(session_status() === PHP_SESSION_NONE){
-    session_start();
-}
-
-// 🔐 GENERAR TOKEN SI NO EXISTE
-if(empty($_SESSION['csrf_token'])){
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
-// 🔐 VALIDAR CSRF (solo si viene)
-$csrf = $_POST['csrf_token'] ?? '';
-
-if(!empty($csrf) && $csrf !== $_SESSION['csrf_token']){
+if(!Permisos::puede('cubicaje.crear')){
     echo json_encode([
         'ok' => false,
-        'error' => 'Token inválido'
+        'error' => 'Sin permisos'
     ]);
     exit;
 }
 
 // 🔥 DATOS
-$nombre = isset($_POST['nombre']) ? trim($_POST['nombre']) : '';
+$nombre = trim($_POST['nombre'] ?? '');
 
 // 🔥 VALIDACIONES
 if(strlen($nombre) < 2){
@@ -55,7 +42,11 @@ if(strlen($nombre) > 100){
 
 try {
 
-    $stmt = $db->prepare("INSERT INTO proyectos (nombre,fecha) VALUES (?,NOW())");
+    $stmt = $db->prepare("
+        INSERT INTO proyectos (nombre, fecha)
+        VALUES (?, NOW())
+    ");
+
     $stmt->execute([$nombre]);
 
     $id = $db->lastInsertId();
@@ -64,11 +55,9 @@ try {
         'ok' => true,
         'proyecto' => [
             'id' => $id,
-            'nombre' => htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8'),
+            'nombre' => $nombre,
             'fecha' => date('Y-m-d H:i:s')
-        ],
-        // 🔐 DEVOLVER TOKEN (IMPORTANTE PARA FRONT)
-        'csrf_token' => $_SESSION['csrf_token']
+        ]
     ]);
 
 } catch(Exception $e){

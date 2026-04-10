@@ -1,18 +1,19 @@
 <?php
 require_once "../login/Auth.php";
+require_once "../login/Permisos.php";
 require_once "../config/database.php";
 
 Auth::verificar();
-Auth::solo('ADMIN');
+Permisos::requerir('cubicaje.editar'); // 🔥 CAMBIO CLAVE
 
 header('Content-Type: application/json');
 
 $db = Database::conectar();
 
 $id = $_POST['id'] ?? 0;
-$nombre = $_POST['nombre'] ?? '';
+$nombre = trim($_POST['nombre'] ?? '');
 
-if(!$id || !$nombre){
+if(!$id || strlen($nombre) < 2){
     echo json_encode([
         'ok' => false,
         'error' => 'Datos inválidos'
