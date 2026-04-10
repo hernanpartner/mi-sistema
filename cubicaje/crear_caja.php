@@ -1,9 +1,10 @@
 <?php
 require_once "../login/Auth.php";
+require_once "../login/Permisos.php";
 require_once "../config/database.php";
 
 Auth::verificar();
-Auth::solo('ADMIN');
+Permisos::requerir('cubicaje.crear'); // 🔥 CAMBIO
 
 header('Content-Type: application/json');
 
@@ -49,15 +50,7 @@ try{
         'ok'=>true,
         'caja'=>[
             'id'=>$id,
-            'nombre'=>$nombre,
-            'largo'=>$largo,
-            'ancho'=>$ancho,
-            'alto'=>$alto,
-            'peso'=>$peso,
-            'cantidad'=>$cantidad,
-            'color'=>$color,
-            'apilable'=>1,
-            'rotable'=>1
+            'nombre'=>$nombre
         ]
     ]);
 

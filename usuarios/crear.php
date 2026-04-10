@@ -1,9 +1,12 @@
 <?php
 require_once __DIR__ . "/../login/Auth.php";
+require_once __DIR__ . "/../login/Permisos.php";
 require_once __DIR__ . "/../config/database.php";
 
 Auth::verificar();
-Auth::solo('ADMIN');
+
+// 🔥 PERMISO CORRECTO
+Permisos::requerir('usuarios.crear');
 
 $db = Database::conectar();
 

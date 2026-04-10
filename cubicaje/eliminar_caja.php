@@ -1,9 +1,10 @@
 <?php
 require_once "../login/Auth.php";
+require_once "../login/Permisos.php";
 require_once "../config/database.php";
 
 Auth::verificar();
-Auth::solo('ADMIN');
+Permisos::requerir('cubicaje.eliminar'); // 🔥 CAMBIO
 
 header('Content-Type: application/json');
 

@@ -1,13 +1,14 @@
 <?php
 require_once "../login/Auth.php";
+require_once "../login/Permisos.php";
 require_once "../config/database.php";
 
 Auth::verificar();
-Auth::solo('ADMIN');
+Permisos::requerir('usuarios.editar'); // 🔥 CAMBIO
 
 $db = Database::conectar();
 
-$id = $_GET['id'];
+$id = $_GET['id'] ?? 0;
 
 $stmt = $db->prepare("SELECT * FROM usuarios WHERE id=?");
 $stmt->execute([$id]);

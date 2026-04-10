@@ -1,9 +1,10 @@
 <?php
 require_once "../login/Auth.php";
+require_once "../login/Permisos.php";
 require_once "../config/database.php";
 
 Auth::verificar();
-Auth::solo('ADMIN');
+Permisos::requerir('usuarios.ver'); // 🔥 CAMBIO
 
 $db = Database::conectar();
 
@@ -16,9 +17,11 @@ ob_start();
 <div class="d-flex justify-content-between mb-3">
     <h3>Gestión de Usuarios</h3>
 
+    <?php if(Permisos::puede('usuarios.crear')): ?>
     <button class="btn btn-primary" id="btnNuevo">
         <i class="bi bi-plus"></i> Nuevo Usuario
     </button>
+    <?php endif; ?>
 </div>
 
 <div class="card">
@@ -54,15 +57,19 @@ ob_start();
 
 <td>
 
+<?php if(Permisos::puede('usuarios.editar')): ?>
 <button class="btn btn-warning btn-sm btnEditar"
 data-id="<?php echo $u['id']; ?>">
 <i class="bi bi-pencil"></i>
 </button>
+<?php endif; ?>
 
+<?php if(Permisos::puede('usuarios.eliminar')): ?>
 <button class="btn btn-danger btn-sm btnEliminar"
 data-id="<?php echo $u['id']; ?>">
 <i class="bi bi-trash"></i>
 </button>
+<?php endif; ?>
 
 </td>
 
@@ -124,18 +131,11 @@ data-id="<?php echo $u['id']; ?>">
 </div>
 
 <script>
-
-/* =========================
-   ESPERAR A QUE TODO CARGUE
-========================= */
 document.addEventListener("DOMContentLoaded", function(){
 
 const modal = new bootstrap.Modal(document.getElementById('modalUsuario'));
 
-/* =========================
-   NUEVO
-========================= */
-document.getElementById('btnNuevo').addEventListener('click', () => {
+document.getElementById('btnNuevo')?.addEventListener('click', () => {
 
 document.getElementById('id').value = '';
 document.getElementById('nombre').value = '';
@@ -147,9 +147,6 @@ modal.show();
 
 });
 
-/* =========================
-   EDITAR (DELEGACIÓN)
-========================= */
 document.addEventListener('click', function(e){
 
 if(e.target.closest('.btnEditar')){
@@ -171,9 +168,6 @@ modal.show();
 
 });
 
-/* =========================
-   GUARDAR
-========================= */
 document.getElementById('btnGuardar').addEventListener('click', async () => {
 
 let id = document.getElementById('id').value;
@@ -200,9 +194,6 @@ alert(data.error || 'Error');
 
 });
 
-/* =========================
-   ELIMINAR (DELEGACIÓN)
-========================= */
 document.addEventListener('click', async function(e){
 
 if(e.target.closest('.btnEliminar')){
@@ -237,4 +228,3 @@ alert(data.error || 'Error');
 $contenido = ob_get_clean();
 $titulo = "Usuarios";
 require_once __DIR__ . "/../layouts/app.php";
-?>

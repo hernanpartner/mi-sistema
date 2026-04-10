@@ -1,9 +1,12 @@
 <?php
 require_once "../login/Auth.php";
+require_once "../login/Permisos.php";
 require_once "../config/database.php";
 
 Auth::verificar();
-Auth::solo('ADMIN');
+
+// 🔥 PERMISO CORRECTO
+Permisos::requerir('usuarios.editar');
 
 header('Content-Type: application/json');
 
