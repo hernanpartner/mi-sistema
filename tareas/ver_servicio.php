@@ -113,14 +113,12 @@ $highlight = ($t['id'] == $tarea_resaltar) ? "table-warning" : "";
 $esResponsable = ($t['responsable_id'] == $_SESSION['usuario_id']);
 ?>
 
-<tr class="<?php echo $highlight; ?>">
+<tr class="<?php echo $highlight; ?>" id="tarea_<?php echo $t['id']; ?>">
 
 <td><?php echo htmlspecialchars($t['titulo']); ?></td>
 <td><?php echo htmlspecialchars($t['descripcion']); ?></td>
 
-<td>
-<?php echo htmlspecialchars($t['responsable'] ?? 'Sin asignar'); ?>
-</td>
+<td><?php echo htmlspecialchars($t['responsable'] ?? 'Sin asignar'); ?></td>
 
 <td>
 <?php
@@ -201,7 +199,7 @@ body: JSON.stringify({id, estado})
 });
 let data = await res.json();
 if(data.ok){
-location.reload(); // 🔥 recarga para mantener lógica limpia
+location.reload();
 }else{
 alert(data.error || 'Error');
 }
@@ -209,31 +207,29 @@ alert(data.error || 'Error');
 alert('Error de conexión');
 }
 }
+
+// 🔥 SCROLL AUTOMÁTICO A LA TAREA
+document.addEventListener('DOMContentLoaded', function(){
+
+    let tareaId = "<?php echo $tarea_resaltar; ?>";
+
+    if(tareaId){
+
+        let fila = document.getElementById('tarea_' + tareaId);
+
+        if(fila){
+            fila.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+
+    }
+
+});
 </script>
 
 <?php
 $contenido = ob_get_clean();
 require_once __DIR__ . "/../layouts/app.php";
 ?>
-<?php if(isset($_GET['highlight'])): ?>
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-
-    let tareaId = "<?php echo $_GET['highlight']; ?>";
-
-    // 🔥 busca fila o elemento de tarea
-    let elemento = document.querySelector('[data-id="'+tareaId+'"]');
-
-    if(elemento){
-        elemento.style.background = '#fff3cd';
-        elemento.style.border = '2px solid #ffc107';
-
-        elemento.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-        });
-    }
-
-});
-</script>
-<?php endif; ?>

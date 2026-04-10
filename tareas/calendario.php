@@ -10,12 +10,9 @@ ob_start();
 <link href="/sistema/libs/fullcalendar/index.global.min.css" rel="stylesheet">
 <script src="/sistema/libs/fullcalendar/index.global.min.js"></script>
 
-<!-- 🔴 COMENTA ESTO SI NO EXISTE BIEN -->
-<!-- <script src="/sistema/libs/fullcalendar/multimonth.global.min.js"></script> -->
-
 <style>
 .tooltip-custom {
-    position: absolute;
+    position: fixed;
     background: #343a40;
     color: #fff;
     padding: 8px;
@@ -23,6 +20,7 @@ ob_start();
     font-size: 12px;
     display: none;
     z-index: 9999;
+    pointer-events: none;
 }
 </style>
 
@@ -99,74 +97,75 @@ function getPrioridades(){
 
 let calendar = new FullCalendar.Calendar(calendarEl, {
 
-initialView: 'dayGridMonth',
-locale: 'es',
+    initialView: 'dayGridMonth',
+    locale: 'es',
 
-headerToolbar: {
-    left: 'prev,next today',
-    center: 'title',
-    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-},
+    headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
 
-events: function(fetchInfo, successCallback, failureCallback){
+    events: function(fetchInfo, successCallback, failureCallback){
 
-    fetch('/sistema/tareas/eventos.php')
-    .then(r => r.json())
-    .then(data => {
+        fetch('/sistema/tareas/eventos.php')
+        .then(r => r.json())
+        .then(data => {
 
-        let estados = getEstados();
-        let prioridades = getPrioridades();
+            let estados = getEstados();
+            let prioridades = getPrioridades();
 
-        let filtrados = data.filter(e => {
-            return estados.includes(e.extendedProps.estado) &&
-                   prioridades.includes(e.extendedProps.prioridad);
+            let filtrados = data.filter(e => {
+                return estados.includes(e.extendedProps.estado) &&
+                       prioridades.includes(e.extendedProps.prioridad);
+            });
+
+            successCallback(filtrados);
+
+        })
+        .catch(err => {
+            console.error(err);
+            failureCallback(err);
         });
 
-        successCallback(filtrados);
+    },
 
-    })
-    .catch(err => {
-        console.error(err);
-        failureCallback(err);
-    });
+    // 🔥 TOOLTIP CORREGIDO
+    eventDidMount: function(info) {
 
-},
+        info.el.addEventListener('mousemove', function(e) {
 
-// 🔥 TOOLTIP PROFESIONAL (ESTABLE)
-eventDidMount: function(info) {
+            let props = info.event.extendedProps;
 
-    let tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML =
+            "<b>" + info.event.title + "</b><br>" +
+            "Estado: " + props.estado + "<br>" +
+            "Prioridad: " + props.prioridad + "<br>" +
+            "Responsable: " + (props.responsable ?? '-') + "<br>" +
+            "Fecha: " + props.fecha;
 
-    info.el.addEventListener('mouseenter', function(e) {
+            tooltip.style.top = (e.clientY + 15) + "px";
+            tooltip.style.left = (e.clientX + 15) + "px";
+            tooltip.style.display = 'block';
+        });
 
-        let props = info.event.extendedProps;
+        info.el.addEventListener('mouseleave', function() {
+            tooltip.style.display = 'none';
+        });
 
-        tooltip.innerHTML =
-        "<b>" + info.event.title + "</b><br>" +
-        "Estado: " + props.estado + "<br>" +
-        "Prioridad: " + props.prioridad + "<br>" +
-        "Responsable: " + (props.responsable ?? '-') + "<br>" +
-        "Fecha: " + props.fecha;
+    },
 
-        tooltip.style.display = 'block';
-    });
+    eventClick: function(info) {
 
-    info.el.addEventListener('mouseleave', function() {
-        tooltip.style.display = 'none';
-    });
+        info.jsEvent.preventDefault();
 
-},
+        let servicio_id = info.event.extendedProps.servicio_id;
+        let tarea_id = info.event.id;
 
-eventClick: function(info) {
-
-    info.jsEvent.preventDefault();
-
-    let servicio_id = info.event.extendedProps.servicio_id;
-
-    if(servicio_id){
-        window.location.href = '/sistema/tareas/ver_servicio.php?id=' + servicio_id + '&highlight=' + info.event.id;
+        if(servicio_id){
+            window.location.href = '/sistema/tareas/ver_servicio.php?id=' + servicio_id + '&tarea=' + tarea_id;
+        }
     }
-}
 
 });
 
@@ -182,12 +181,6 @@ document.querySelectorAll('.filtro-estado, .filtro-prioridad').forEach(cb => {
 // año
 yearSelect.addEventListener('change', function() {
     calendar.gotoDate(this.value + "-01-01");
-});
-
-// tooltip
-document.addEventListener('mousemove', function(e) {
-    tooltip.style.top = (e.pageY + 10) + "px";
-    tooltip.style.left = (e.pageX + 10) + "px";
 });
 
 });
