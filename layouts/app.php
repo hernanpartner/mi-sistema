@@ -26,7 +26,6 @@ $rol = Auth::rol();
 
 <div class="app-wrapper">
 
-<!-- NAVBAR -->
 <nav class="app-header navbar navbar-expand bg-body">
 <div class="container-fluid">
 
@@ -44,7 +43,6 @@ $rol = Auth::rol();
 
 <ul class="navbar-nav ms-auto">
 
-<!-- 🔔 NOTIFICACIONES -->
 <li class="nav-item dropdown">
 <a class="nav-link" data-bs-toggle="dropdown">
 <i class="bi bi-bell"></i>
@@ -58,7 +56,6 @@ $rol = Auth::rol();
 </div>
 </li>
 
-<!-- 👤 USUARIO -->
 <li class="nav-item dropdown">
 <a class="nav-link d-flex align-items-center" data-bs-toggle="dropdown">
 <img src="/sistema/img/user.png" class="rounded-circle me-2" width="30">
@@ -83,87 +80,31 @@ Rol: <?php echo $rol; ?>
 </div>
 </nav>
 
-<!-- SIDEBAR -->
 <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
-
-<div class="sidebar-brand text-center py-3">
-LOGÍSTICA
-</div>
+<div class="sidebar-brand text-center py-3">LOGÍSTICA</div>
 
 <div class="sidebar-wrapper">
 <ul class="nav sidebar-menu flex-column">
 
-<li class="nav-item">
-<a href="/sistema/dashboard/" class="nav-link">
-<i class="nav-icon bi bi-speedometer"></i>
-<p>Dashboard</p>
-</a>
-</li>
-
-<li class="nav-item">
-<a href="/sistema/tareas/" class="nav-link">
-<i class="nav-icon bi bi-list-task"></i>
-<p>Sistema de tareas</p>
-</a>
-</li>
-
-<li class="nav-item">
-<a href="/sistema/tareas/calendario.php" class="nav-link">
-<i class="nav-icon bi bi-calendar"></i>
-<p>Calendario</p>
-</a>
-</li>
-
-<li class="nav-item">
-<a href="/sistema/tareas/historial_global.php" class="nav-link">
-<i class="nav-icon bi bi-clock-history"></i>
-<p>Historial</p>
-</a>
-</li>
-
-<li class="nav-item">
-<a href="/sistema/cubicaje/" class="nav-link">
-<i class="nav-icon bi bi-box"></i>
-<p>Cubicaje</p>
-</a>
-</li>
-
-<li class="nav-item">
-<a href="/sistema/pantalla/" class="nav-link">
-<i class="nav-icon bi bi-display"></i>
-<p>Pantalla</p>
-</a>
-</li>
+<li class="nav-item"><a href="/sistema/dashboard/" class="nav-link"><i class="nav-icon bi bi-speedometer"></i><p>Dashboard</p></a></li>
+<li class="nav-item"><a href="/sistema/tareas/" class="nav-link"><i class="nav-icon bi bi-list-task"></i><p>Sistema de tareas</p></a></li>
+<li class="nav-item"><a href="/sistema/tareas/calendario.php" class="nav-link"><i class="nav-icon bi bi-calendar"></i><p>Calendario</p></a></li>
+<li class="nav-item"><a href="/sistema/tareas/historial_global.php" class="nav-link"><i class="nav-icon bi bi-clock-history"></i><p>Historial</p></a></li>
+<li class="nav-item"><a href="/sistema/cubicaje/" class="nav-link"><i class="nav-icon bi bi-box"></i><p>Cubicaje</p></a></li>
+<li class="nav-item"><a href="/sistema/pantalla/" class="nav-link"><i class="nav-icon bi bi-display"></i><p>Pantalla</p></a></li>
 
 <?php if ($rol === 'ADMIN') { ?>
-
-<li class="nav-item">
-<a href="/sistema/usuarios/" class="nav-link">
-<i class="nav-icon bi bi-people"></i>
-<p>Usuarios</p>
-</a>
-</li>
-
-<li class="nav-item">
-<a href="/sistema/usuarios/permisos.php" class="nav-link">
-<i class="nav-icon bi bi-shield-lock"></i>
-<p>Permisos</p>
-</a>
-</li>
-
+<li class="nav-item"><a href="/sistema/usuarios/" class="nav-link"><i class="nav-icon bi bi-people"></i><p>Usuarios</p></a></li>
+<li class="nav-item"><a href="/sistema/usuarios/permisos.php" class="nav-link"><i class="nav-icon bi bi-shield-lock"></i><p>Permisos</p></a></li>
 <?php } ?>
 
 </ul>
 </div>
-
 </aside>
 
-<!-- CONTENIDO -->
 <main class="app-main">
 <div class="container-fluid">
-
 <?php echo $contenido ?? ''; ?>
-
 </div>
 </main>
 
@@ -177,51 +118,53 @@ Sistema Logístico © 2026
 <script src="/sistema/libs/adminlte/dist/js/adminlte.min.js"></script>
 
 <script>
-// =========================
-// 🔔 CARGAR NOTIFICACIONES
-// =========================
+// 🔥 TIEMPO REAL OPTIMIZADO
+
+let ultimaCantidad = 0;
+
 function cargarNotificaciones(){
 
-fetch('/sistema/api/notificaciones.php')
+fetch('/sistema/notificaciones/notificaciones.php')
 .then(r => r.json())
 .then(data => {
 
 let lista = document.getElementById('notif-list');
 let badge = document.getElementById('notif-count');
 
-lista.innerHTML = '';
+let noLeidas = data.filter(n => n.leido == 0).length;
 
-let noLeidas = 0;
+// 🔥 SOLO ACTUALIZA SI CAMBIA
+if(noLeidas === ultimaCantidad) return;
+
+ultimaCantidad = noLeidas;
+
+lista.innerHTML = '';
 
 if(data.length === 0){
 lista.innerHTML = '<span class="dropdown-item">Sin notificaciones</span>';
+badge.style.display = 'none';
 return;
 }
 
 data.forEach(n => {
 
-if(n.leido == 0) noLeidas++;
-
 let bg = n.leido == 0 ? 'style="background:#f5f5f5;"' : '';
 
-let item = `
+lista.innerHTML += `
 <a href="${n.link}" class="dropdown-item text-wrap noti-item" data-id="${n.id}" ${bg}>
 ${n.mensaje}
 </a>
 `;
 
-lista.innerHTML += item;
-
 });
 
-// contador
 if(noLeidas > 0){
 badge.innerText = noLeidas;
+badge.style.display = 'inline-block';
 }else{
 badge.style.display = 'none';
 }
 
-// click marcar leída
 document.querySelectorAll(".noti-item").forEach(el => {
 
 el.addEventListener("click", function(e){
@@ -247,12 +190,11 @@ window.location.href = link;
 });
 }
 
-// cargar al iniciar
+// 🔥 ARRANQUE
 cargarNotificaciones();
 
-// auto refresco cada 10 segundos
-setInterval(cargarNotificaciones, 10000);
-
+// 🔥 TIEMPO REAL (cada 3s pero optimizado)
+setInterval(cargarNotificaciones, 3000);
 </script>
 
 </body>

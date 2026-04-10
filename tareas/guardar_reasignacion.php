@@ -5,6 +5,8 @@ require_once "../config/database.php";
 
 Auth::verificar();
 
+header('Content-Type: application/json');
+
 $db = Database::conectar();
 
 $tarea_id     = (int)$_POST['tarea'];
@@ -16,7 +18,6 @@ try {
 
     $db->beginTransaction();
 
-    // 🔥 Obtener tarea actual
     $stmt = $db->prepare("
         SELECT t.*, u.nombre as responsable_nombre
         FROM tareas t
@@ -26,9 +27,7 @@ try {
     $stmt->execute([$tarea_id]);
     $tarea = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$tarea) {
-        throw new Exception("Tarea no encontrada");
-    }
+    if (!$tarea) throw new Exception("Tarea no encontrada");
 
     $servicio_id = (int)$tarea['servicio_id'];
 
@@ -36,20 +35,14 @@ try {
         throw new Exception("No permitido");
     }
 
-    // 🔥 Actor
     $stmtActor = $db->prepare("SELECT nombre FROM usuarios WHERE id = ?");
     $stmtActor->execute([$_SESSION['usuario_id']]);
-    $actorData = $stmtActor->fetch(PDO::FETCH_ASSOC);
-    $nombreActor = $actorData['nombre'] ?? 'Usuario';
+    $nombreActor = $stmtActor->fetchColumn() ?? 'Usuario';
 
-    // 🔥 Nuevo usuario
     $stmtUser = $db->prepare("SELECT nombre FROM usuarios WHERE id = ?");
     $stmtUser->execute([$nuevoUsuario]);
-    $nuevoUserData = $stmtUser->fetch(PDO::FETCH_ASSOC);
+    $nombreNuevo = $stmtUser->fetchColumn() ?? 'Usuario';
 
-    $nombreNuevo  = $nuevoUserData['nombre'] ?? 'Usuario';
-
-    // 🔥 UPDATE
     $stmt = $db->prepare("
         UPDATE tareas 
         SET responsable_id = ?, descripcion = ?, fecha_limite = ?, asignado_por = ?
@@ -64,48 +57,20 @@ try {
         $tarea_id
     ]);
 
-    // =========================
-    // 🔥 HISTORIAL (FORMATO LIMPIO)
-    // =========================
+    // historial
+    $stmtHist = $db->prepare("
+        INSERT INTO historial_tareas (tarea_id, servicio_id, usuario_id, accion, fecha)
+        VALUES (?, ?, ?, ?, NOW())
+    ");
 
-    $acciones = [];
+    $stmtHist->execute([
+        $tarea_id,
+        $servicio_id,
+        $_SESSION['usuario_id'],
+        "$nombreActor reasignó a $nombreNuevo"
+    ]);
 
-    // 🔁 REASIGNACIÓN
-    if ($tarea['responsable_id'] != $nuevoUsuario) {
-        $acciones[] = "$nombreActor reasignó a $nombreNuevo, $nuevaDescripcion";
-    }
-
-    // ✏️ DESCRIPCIÓN
-    elseif ($tarea['descripcion'] != $nuevaDescripcion) {
-        $acciones[] = "$nombreActor actualizó la descripción: $nuevaDescripcion";
-    }
-
-    // 📅 FECHA
-    if ($tarea['fecha_limite'] != $nuevaFecha) {
-        $acciones[] = "$nombreActor cambió la fecha límite a $nuevaFecha";
-    }
-
-    foreach ($acciones as $accion) {
-
-        $stmtHist = $db->prepare("
-            INSERT INTO historial_tareas (tarea_id, servicio_id, usuario_id, accion, fecha)
-            VALUES (?, ?, ?, ?, NOW())
-        ");
-
-        $stmtHist->execute([
-            $tarea_id,
-            $servicio_id,
-            $_SESSION['usuario_id'],
-            $accion
-        ]);
-    }
-
-    // =========================
-    // 🔔 NOTIFICACIÓN
-    // =========================
-
-    $mensaje = $nombreActor . " te asignó la tarea: " . $tarea['titulo'];
-
+    // notificación
     $stmtNotif = $db->prepare("
         INSERT INTO notificaciones (usuario_id, mensaje, leido, fecha, tarea_id, servicio_id)
         VALUES (?, ?, 0, NOW(), ?, ?)
@@ -113,18 +78,23 @@ try {
 
     $stmtNotif->execute([
         $nuevoUsuario,
-        $mensaje,
+        "$nombreActor te asignó la tarea: ".$tarea['titulo'],
         $tarea_id,
         $servicio_id
     ]);
 
     $db->commit();
 
-    header("Location: ver_servicio.php?id=" . $servicio_id);
-    exit();
+    echo json_encode([
+        "ok" => true
+    ]);
 
 } catch (Exception $e) {
 
     $db->rollBack();
-    die("Error: " . $e->getMessage());
+
+    echo json_encode([
+        "ok" => false,
+        "error" => $e->getMessage()
+    ]);
 }
