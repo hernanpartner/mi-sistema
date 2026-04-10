@@ -18,6 +18,7 @@ try {
 
     $db->beginTransaction();
 
+    // 🔍 Obtener tarea actual
     $stmt = $db->prepare("
         SELECT t.*, u.nombre as responsable_nombre
         FROM tareas t
@@ -27,7 +28,9 @@ try {
     $stmt->execute([$tarea_id]);
     $tarea = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$tarea) throw new Exception("Tarea no encontrada");
+    if (!$tarea) {
+        throw new Exception("Tarea no encontrada");
+    }
 
     $servicio_id = (int)$tarea['servicio_id'];
 
@@ -35,14 +38,17 @@ try {
         throw new Exception("No permitido");
     }
 
+    // 🔍 Actor
     $stmtActor = $db->prepare("SELECT nombre FROM usuarios WHERE id = ?");
     $stmtActor->execute([$_SESSION['usuario_id']]);
     $nombreActor = $stmtActor->fetchColumn() ?? 'Usuario';
 
+    // 🔍 Nuevo usuario
     $stmtUser = $db->prepare("SELECT nombre FROM usuarios WHERE id = ?");
     $stmtUser->execute([$nuevoUsuario]);
     $nombreNuevo = $stmtUser->fetchColumn() ?? 'Usuario';
 
+    // 🔥 UPDATE
     $stmt = $db->prepare("
         UPDATE tareas 
         SET responsable_id = ?, descripcion = ?, fecha_limite = ?, asignado_por = ?
@@ -57,20 +63,48 @@ try {
         $tarea_id
     ]);
 
-    // historial
-    $stmtHist = $db->prepare("
-        INSERT INTO historial_tareas (tarea_id, servicio_id, usuario_id, accion, fecha)
-        VALUES (?, ?, ?, ?, NOW())
-    ");
+    // =========================
+    // 📜 HISTORIAL COMPLETO (FIX REAL)
+    // =========================
 
-    $stmtHist->execute([
-        $tarea_id,
-        $servicio_id,
-        $_SESSION['usuario_id'],
-        "$nombreActor reasignó a $nombreNuevo"
-    ]);
+    $acciones = [];
 
-    // notificación
+    // 🔁 REASIGNACIÓN
+    if ($tarea['responsable_id'] != $nuevoUsuario) {
+        $acciones[] = "$nombreActor reasignó a $nombreNuevo";
+    }
+
+    // ✏️ DESCRIPCIÓN
+    if ($tarea['descripcion'] != $nuevaDescripcion) {
+        $acciones[] = "$nombreActor actualizó la descripción: $nuevaDescripcion";
+    }
+
+    // 📅 FECHA
+    if ($tarea['fecha_limite'] != $nuevaFecha) {
+        $acciones[] = "$nombreActor cambió la fecha límite a $nuevaFecha";
+    }
+
+    foreach ($acciones as $accion) {
+
+        $stmtHist = $db->prepare("
+            INSERT INTO historial_tareas (tarea_id, servicio_id, usuario_id, accion, fecha)
+            VALUES (?, ?, ?, ?, NOW())
+        ");
+
+        $stmtHist->execute([
+            $tarea_id,
+            $servicio_id,
+            $_SESSION['usuario_id'],
+            $accion
+        ]);
+    }
+
+    // =========================
+    // 🔔 NOTIFICACIÓN
+    // =========================
+
+    $mensaje = $nombreActor . " te asignó la tarea: " . $tarea['titulo'];
+
     $stmtNotif = $db->prepare("
         INSERT INTO notificaciones (usuario_id, mensaje, leido, fecha, tarea_id, servicio_id)
         VALUES (?, ?, 0, NOW(), ?, ?)
@@ -78,7 +112,7 @@ try {
 
     $stmtNotif->execute([
         $nuevoUsuario,
-        "$nombreActor te asignó la tarea: ".$tarea['titulo'],
+        $mensaje,
         $tarea_id,
         $servicio_id
     ]);

@@ -53,9 +53,10 @@ ob_start();
 
 <div class="card-body">
 
-<form method="POST" action="guardar_reasignacion.php">
+<form id="formReasignar">
 
 <input type="hidden" name="tarea" value="<?php echo $tarea_id; ?>">
+<input type="hidden" name="servicio" value="<?php echo $servicio_id; ?>">
 
 <div class="mb-3">
 <label>Nuevo responsable</label>
@@ -88,7 +89,39 @@ value="<?php echo $tarea['fecha_limite']; ?>" required>
 </div>
 </div>
 
+<script>
+document.getElementById("formReasignar").addEventListener("submit", async function(e){
+
+    e.preventDefault();
+
+    let form = this;
+    let formData = new FormData(form);
+
+    try{
+
+        let res = await fetch("guardar_reasignacion.php", {
+            method: "POST",
+            body: formData
+        });
+
+        let data = await res.json();
+
+        if(data.ok){
+            let servicio = formData.get("servicio");
+            window.location.href = "ver_servicio.php?id=" + servicio;
+        }else{
+            alert(data.error || "Error");
+        }
+
+    }catch(err){
+        alert("Error de conexión");
+    }
+
+});
+</script>
+
 <?php
 $contenido = ob_get_clean();
 $titulo = "Reasignar tarea";
 require_once __DIR__ . "/../layouts/app.php";
+?>

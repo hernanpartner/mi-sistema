@@ -208,7 +208,7 @@ alert('Error de conexión');
 }
 }
 
-// 🔥 SCROLL AUTOMÁTICO A LA TAREA
+// 🔥 SCROLL + REFRESCO NOTIFICACIONES
 document.addEventListener('DOMContentLoaded', function(){
 
     let tareaId = "<?php echo $tarea_resaltar; ?>";
@@ -224,6 +224,11 @@ document.addEventListener('DOMContentLoaded', function(){
             });
         }
 
+    }
+
+    // 🔥 FORZAR ACTUALIZACIÓN DE NOTIFICACIONES
+    if(typeof cargarNotificaciones === "function"){
+        cargarNotificaciones();
     }
 
 });

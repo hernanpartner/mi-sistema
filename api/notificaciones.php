@@ -1,44 +1,35 @@
 <?php
-require_once "../login/Auth.php";
-require_once "../config/database.php";
 
-Auth::verificar();
+require_once __DIR__ . "/../config/database.php";
+require_once __DIR__ . "/../login/Auth.php";
 
-$db = Database::conectar();
+// 🔥 NO usar redirecciones en API
+if (!isset($_SESSION)) session_start();
 
-$usuario_id = $_SESSION['usuario_id'];
-
-// 🔥 MISMAS NOTIFICACIONES QUE USAS EN TAREAS
-$stmt = $db->prepare("
-    SELECT n.*, s.codigo AS servicio_codigo
-    FROM notificaciones n
-    LEFT JOIN servicios s ON n.servicio_id = s.id
-    WHERE n.usuario_id = ? 
-    ORDER BY n.fecha DESC 
-    LIMIT 30
-");
-$stmt->execute([$usuario_id]);
-
-$notificaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// 🔥 FORMATO PARA DASHBOARD
-$data = [];
-
-foreach($notificaciones as $n){
-
-    $link = "/sistema/tareas/ver_servicio.php?id=" . $n['servicio_id'];
-
-    if (!empty($n['tarea_id'])) {
-        $link .= "&tarea=" . $n['tarea_id'];
-    }
-
-    $data[] = [
-        "id" => $n['id'],
-        "mensaje" => (!empty($n['servicio_codigo']) ? "[".$n['servicio_codigo']."] " : "") . $n['mensaje'],
-        "link" => $link,
-        "leido" => $n['leido']
-    ];
+if (!isset($_SESSION['usuario_id'])) {
+    http_response_code(401);
+    echo json_encode([]);
+    exit;
 }
 
 header('Content-Type: application/json');
+
+$db = Database::conectar();
+
+$stmt = $db->prepare("
+    SELECT id, mensaje, leido, tarea_id, servicio_id
+    FROM notificaciones
+    WHERE usuario_id = ?
+    ORDER BY fecha DESC
+    LIMIT 20
+");
+
+$stmt->execute([$_SESSION['usuario_id']]);
+$data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// 🔥 generar link correcto
+foreach ($data as &$n) {
+    $n['link'] = "/sistema/tareas/ver_servicio.php?id={$n['servicio_id']}&tarea={$n['tarea_id']}&noti={$n['id']}";
+}
+
 echo json_encode($data);
