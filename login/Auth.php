@@ -39,7 +39,7 @@ class Auth {
 
         self::iniciar();
 
-        // AUTO LOGIN COOKIE
+        // 🔥 AUTO LOGIN DESDE COOKIE
         if (!isset($_SESSION['usuario_id']) && isset($_COOKIE['remember_token'])) {
             self::loginDesdeCookie();
         }
@@ -54,7 +54,7 @@ class Auth {
             exit;
         }
 
-        // EXPIRACIÓN
+        // 🔥 EXPIRACIÓN
         if (isset($_SESSION['ultimo_acceso']) &&
             (time() - $_SESSION['ultimo_acceso'] > self::$timeout)) {
 
@@ -70,12 +70,12 @@ class Auth {
 
         $_SESSION['ultimo_acceso'] = time();
 
-        // SEGURIDAD IP + USER AGENT
+        // 🔥 VALIDACIÓN IP + AGENTE (CORREGIDO)
         if (
             isset($_SESSION['ip'], $_SESSION['agent']) &&
-            ($_SESSION['ip'] !== ($_SERVER['REMOTE_ADDR'] ?? '') ||
-             $_SESSION['agent'] !== ($_SERVER['HTTP_USER_AGENT'] ?? ''))
+            ($_SESSION['agent'] !== ($_SERVER['HTTP_USER_AGENT'] ?? ''))
         ) {
+            // ❌ YA NO VALIDAMOS IP (puede cambiar)
             self::logout();
 
             if(self::esAjax()){
@@ -100,10 +100,10 @@ class Auth {
         $_SESSION['nombre'] = $usuario['nombre'];
         $_SESSION['rol'] = strtoupper(trim($usuario['rol'] ?? 'USER'));
 
-        $_SESSION['ip'] = $_SERVER['REMOTE_ADDR'] ?? '';
         $_SESSION['agent'] = $_SERVER['HTTP_USER_AGENT'] ?? '';
         $_SESSION['ultimo_acceso'] = time();
 
+        // 🔥 RECORDARME
         if ($recordar) {
 
             $token = bin2hex(random_bytes(32));
@@ -127,7 +127,7 @@ class Auth {
     }
 
     /* =========================
-       COOKIE LOGIN
+       LOGIN DESDE COOKIE
     ========================= */
     private static function loginDesdeCookie(){
 
@@ -145,6 +145,9 @@ class Auth {
 
         if ($user) {
             self::login($user, false);
+        } else {
+            // 🔥 BORRAR COOKIE INVÁLIDA
+            setcookie("remember_token", "", time() - 3600, "/");
         }
     }
 
@@ -154,6 +157,15 @@ class Auth {
     public static function logout(){
 
         self::iniciar();
+
+        // 🔥 ELIMINAR TOKEN EN BD TAMBIÉN
+        if (isset($_SESSION['usuario_id'])) {
+            require_once __DIR__ . "/../config/database.php";
+            $db = Database::conectar();
+
+            $stmt = $db->prepare("UPDATE usuarios SET remember_token=NULL WHERE id=?");
+            $stmt->execute([$_SESSION['usuario_id']]);
+        }
 
         if (isset($_COOKIE['remember_token'])) {
             setcookie("remember_token", "", time() - 3600, "/");
@@ -174,7 +186,7 @@ class Auth {
     }
 
     /* =========================
-       SOLO ROL
+       SOLO ROL (LEGACY)
     ========================= */
     public static function solo($rol){
 
@@ -182,7 +194,6 @@ class Auth {
 
         $actual = strtoupper(trim($_SESSION['rol'] ?? ''));
 
-        // 🔥 ADMIN SIEMPRE PASA (TU REGLA)
         if($actual === 'ADMIN'){
             return;
         }
@@ -206,7 +217,6 @@ class Auth {
 
         $actual = strtoupper(trim($_SESSION['rol'] ?? ''));
 
-        // 🔥 ADMIN SIEMPRE PASA
         if($actual === 'ADMIN'){
             return;
         }

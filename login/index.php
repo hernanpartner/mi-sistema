@@ -9,6 +9,9 @@ if (isset($_SESSION['usuario_id'])) {
     exit;
 }
 
+// 🔥 RECUPERAR USUARIO RECORDADO
+$usuario_recordado = $_COOKIE['usuario_recordado'] ?? '';
+
 $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -26,30 +29,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($user) {
 
-        // 🔒 BLOQUEO POR INTENTOS
         if ($user['bloqueado_hasta'] && strtotime($user['bloqueado_hasta']) > time()) {
             $error = "Cuenta bloqueada temporalmente";
         }
 
         elseif (password_verify($password, $user['password'])) {
 
-            // RESET INTENTOS
+            // 🔥 RESET INTENTOS
             $stmt = $db->prepare("UPDATE usuarios SET intentos=0, bloqueado_hasta=NULL WHERE id=?");
             $stmt->execute([$user['id']]);
 
+            // 🔥 LOGIN
             Auth::login($user, $recordar);
+
+            // 🔥 RECORDAR USUARIO (ESTO FALTABA)
+            if ($recordar) {
+                setcookie("usuario_recordado", $usuario, time() + (86400 * 30), "/");
+            } else {
+                setcookie("usuario_recordado", "", time() - 3600, "/");
+            }
 
             header("Location: /sistema/dashboard/");
             exit;
 
         } else {
 
-            // SUMAR INTENTOS
             $intentos = $user['intentos'] + 1;
 
             if ($intentos >= 5) {
 
-                $bloqueado = date("Y-m-d H:i:s", time() + 300); // 5 min
+                $bloqueado = date("Y-m-d H:i:s", time() + 300);
 
                 $stmt = $db->prepare("UPDATE usuarios SET intentos=?, bloqueado_hasta=? WHERE id=?");
                 $stmt->execute([$intentos, $bloqueado, $user['id']]);
@@ -85,6 +94,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="card p-4 shadow" style="width:350px;">
 
+<!-- 🔥 LOGO -->
+<div class="text-center mb-3">
+    <img src="/sistema/assets/logo.png" alt="Logo" style="max-width:120px;">
+</div>
+
 <h4 class="text-center mb-3">Sistema Logístico</h4>
 
 <?php if($error){ ?>
@@ -97,12 +111,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <form method="POST">
 
-<input type="text" name="usuario" class="form-control mb-2" placeholder="Usuario" required>
+<input 
+    type="text" 
+    name="usuario" 
+    class="form-control mb-2" 
+    placeholder="Usuario" 
+    required
+    value="<?php echo htmlspecialchars($usuario_recordado); ?>"
+>
 
-<input type="password" name="password" class="form-control mb-2" placeholder="Contraseña" required>
+<input 
+    type="password" 
+    name="password" 
+    class="form-control mb-2" 
+    placeholder="Contraseña" 
+    required
+>
 
 <div class="form-check mb-3">
-<input type="checkbox" name="recordar" class="form-check-input">
+<input type="checkbox" name="recordar" class="form-check-input"
+<?php if($usuario_recordado) echo 'checked'; ?>>
 <label class="form-check-label">Recordarme</label>
 </div>
 
