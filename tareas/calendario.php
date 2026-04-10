@@ -20,7 +20,26 @@ ob_start();
     font-size: 12px;
     display: none;
     z-index: 9999;
-    pointer-events: none;
+}
+
+.modal-custom {
+    position: fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background: rgba(0,0,0,0.5);
+    display:none;
+    z-index:10000;
+}
+
+.modal-content-custom {
+    background:#fff;
+    width:600px;
+    max-width:90%;
+    margin:50px auto;
+    padding:20px;
+    border-radius:8px;
 }
 </style>
 
@@ -31,69 +50,25 @@ ob_start();
 
 <div class="card-body">
 
-<div class="row mb-3">
-
-<div class="col-md-3">
-<label>Año</label>
-<select id="yearSelect" class="form-control"></select>
-</div>
-
-<div class="col-md-9">
-
-<b>Estado:</b><br>
-
-<label><input type="checkbox" class="filtro-estado" value="PENDIENTE" checked> Pendiente</label>
-<label><input type="checkbox" class="filtro-estado" value="EN PROCESO" checked> En proceso</label>
-<label><input type="checkbox" class="filtro-estado" value="BLOQUEADO" checked> Bloqueado</label>
-<label><input type="checkbox" class="filtro-estado" value="TERMINADO" checked> Terminado</label>
-
-<br><br>
-
-<b>Prioridad:</b><br>
-
-<label><input type="checkbox" class="filtro-prioridad" value="BAJA" checked> Baja</label>
-<label><input type="checkbox" class="filtro-prioridad" value="MEDIA" checked> Media</label>
-<label><input type="checkbox" class="filtro-prioridad" value="ALTA" checked> Alta</label>
-<label><input type="checkbox" class="filtro-prioridad" value="URGENTE" checked> Urgente</label>
-
-</div>
-
-</div>
-
 <div id="calendar"></div>
 <div id="tooltip" class="tooltip-custom"></div>
 
 </div>
 </div>
 
-<a href="/sistema/dashboard/" class="btn btn-secondary mt-3">⬅ Volver</a>
+<!-- MODAL -->
+<div id="modalTarea" class="modal-custom">
+    <div class="modal-content-custom">
+        <button onclick="cerrarModal()" class="btn btn-danger btn-sm float-end">X</button>
+        <div id="contenidoModal"></div>
+    </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
 let tooltip = document.getElementById('tooltip');
 let calendarEl = document.getElementById('calendar');
-let yearSelect = document.getElementById('yearSelect');
-
-let currentYear = new Date().getFullYear();
-
-// años
-for (let y = currentYear - 5; y <= currentYear + 5; y++) {
-    let option = document.createElement("option");
-    option.value = y;
-    option.text = y;
-    if (y === currentYear) option.selected = true;
-    yearSelect.appendChild(option);
-}
-
-// filtros
-function getEstados(){
-    return Array.from(document.querySelectorAll('.filtro-estado:checked')).map(e => e.value);
-}
-
-function getPrioridades(){
-    return Array.from(document.querySelectorAll('.filtro-prioridad:checked')).map(e => e.value);
-}
 
 let calendar = new FullCalendar.Calendar(calendarEl, {
 
@@ -110,27 +85,11 @@ let calendar = new FullCalendar.Calendar(calendarEl, {
 
         fetch('/sistema/tareas/eventos.php')
         .then(r => r.json())
-        .then(data => {
-
-            let estados = getEstados();
-            let prioridades = getPrioridades();
-
-            let filtrados = data.filter(e => {
-                return estados.includes(e.extendedProps.estado) &&
-                       prioridades.includes(e.extendedProps.prioridad);
-            });
-
-            successCallback(filtrados);
-
-        })
-        .catch(err => {
-            console.error(err);
-            failureCallback(err);
-        });
+        .then(data => successCallback(data))
+        .catch(err => failureCallback(err));
 
     },
 
-    // 🔥 TOOLTIP CORREGIDO
     eventDidMount: function(info) {
 
         info.el.addEventListener('mousemove', function(e) {
@@ -159,31 +118,34 @@ let calendar = new FullCalendar.Calendar(calendarEl, {
 
         info.jsEvent.preventDefault();
 
-        let servicio_id = info.event.extendedProps.servicio_id;
         let tarea_id = info.event.id;
 
-        if(servicio_id){
-            window.location.href = '/sistema/tareas/ver_servicio.php?id=' + servicio_id + '&tarea=' + tarea_id;
-        }
+        abrirModal(tarea_id);
     }
 
 });
 
 calendar.render();
 
-// filtros
-document.querySelectorAll('.filtro-estado, .filtro-prioridad').forEach(cb => {
-    cb.addEventListener('change', function() {
-        calendar.refetchEvents();
+});
+
+// 🔥 MODAL AJAX
+function abrirModal(id){
+
+    fetch('/sistema/tareas/ver_tarea_modal.php?id='+id)
+    .then(r => r.text())
+    .then(html => {
+
+        document.getElementById('contenidoModal').innerHTML = html;
+        document.getElementById('modalTarea').style.display = 'block';
+
     });
-});
 
-// año
-yearSelect.addEventListener('change', function() {
-    calendar.gotoDate(this.value + "-01-01");
-});
+}
 
-});
+function cerrarModal(){
+    document.getElementById('modalTarea').style.display = 'none';
+}
 </script>
 
 <?php
