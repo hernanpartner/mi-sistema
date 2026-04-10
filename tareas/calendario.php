@@ -10,6 +10,9 @@ ob_start();
 <link href="/sistema/libs/fullcalendar/index.global.min.css" rel="stylesheet">
 <script src="/sistema/libs/fullcalendar/index.global.min.js"></script>
 
+<!-- 🔴 COMENTA ESTO SI NO EXISTE BIEN -->
+<!-- <script src="/sistema/libs/fullcalendar/multimonth.global.min.js"></script> -->
+
 <style>
 .tooltip-custom {
     position: absolute;
@@ -78,104 +81,109 @@ let currentYear = new Date().getFullYear();
 
 // años
 for (let y = currentYear - 5; y <= currentYear + 5; y++) {
-let option = document.createElement("option");
-option.value = y;
-option.text = y;
-if (y === currentYear) option.selected = true;
-yearSelect.appendChild(option);
+    let option = document.createElement("option");
+    option.value = y;
+    option.text = y;
+    if (y === currentYear) option.selected = true;
+    yearSelect.appendChild(option);
 }
 
 // filtros
 function getEstados(){
-return Array.from(document.querySelectorAll('.filtro-estado:checked')).map(e => e.value);
+    return Array.from(document.querySelectorAll('.filtro-estado:checked')).map(e => e.value);
 }
 
 function getPrioridades(){
-return Array.from(document.querySelectorAll('.filtro-prioridad:checked')).map(e => e.value);
+    return Array.from(document.querySelectorAll('.filtro-prioridad:checked')).map(e => e.value);
 }
 
-// calendario
 let calendar = new FullCalendar.Calendar(calendarEl, {
 
-initialView: 'dayGridMonth',
-locale: 'es',
+    // 🔥 VISTA ESTABLE
+    initialView: 'dayGridMonth',
 
-headerToolbar: {
-left: 'prev,next today',
-center: 'title',
-right: 'dayGridMonth,timeGridWeek,timeGridDay'
-},
+    locale: 'es',
 
-events: function(fetchInfo, successCallback, failureCallback){
+    headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
 
-fetch('eventos.php')
-.then(r => r.json())
-.then(data => {
+    events: function(fetchInfo, successCallback, failureCallback){
 
-let estados = getEstados();
-let prioridades = getPrioridades();
+        fetch('/sistema/tareas/eventos.php')
+        .then(r => r.json())
+        .then(data => {
 
-// 🔥 FILTRO REAL
-let filtrados = data.filter(e => {
-return estados.includes(e.estado) && prioridades.includes(e.prioridad);
-});
+            console.log("EVENTOS:", data); // 🔥 DEBUG
 
-successCallback(filtrados);
+            let estados = getEstados();
+            let prioridades = getPrioridades();
 
-});
+            let filtrados = data.filter(e => {
+                return estados.includes(e.extendedProps.estado) &&
+                       prioridades.includes(e.extendedProps.prioridad);
+            });
 
-},
+            successCallback(filtrados);
 
-// 🔥 CLICK CORRECTO
-eventClick: function(info) {
+        })
+        .catch(err => {
+            console.error("ERROR:", err);
+            failureCallback(err);
+        });
 
-let servicio_id = info.event.extendedProps.servicio_id;
+    },
 
-if(servicio_id){
-window.location.href = 'ver_servicio.php?id=' + servicio_id;
-}
+    eventClick: function(info) {
+        info.jsEvent.preventDefault();
 
-},
+        let servicio_id = info.event.extendedProps.servicio_id;
 
-eventMouseEnter: function(info) {
+        if(servicio_id){
+            window.location.href = '/sistema/tareas/ver_servicio.php?id=' + servicio_id;
+        }
+    },
 
-let props = info.event.extendedProps;
+    eventMouseEnter: function(info) {
 
-tooltip.innerHTML =
-"<b>" + info.event.title + "</b><br>" +
-"Estado: " + props.estado + "<br>" +
-"Prioridad: " + props.prioridad + "<br>" +
-"Responsable: " + (props.responsable ?? '-') + "<br>" +
-"Fecha: " + props.fecha;
+        let props = info.event.extendedProps;
 
-tooltip.style.display = 'block';
+        tooltip.innerHTML =
+        "<b>" + info.event.title + "</b><br>" +
+        "Estado: " + props.estado + "<br>" +
+        "Prioridad: " + props.prioridad + "<br>" +
+        "Responsable: " + (props.responsable ?? '-') + "<br>" +
+        "Fecha: " + props.fecha;
 
-},
+        tooltip.style.display = 'block';
+    },
 
-eventMouseLeave: function() {
-tooltip.style.display = 'none';
-}
+    eventMouseLeave: function() {
+        tooltip.style.display = 'none';
+    }
 
 });
 
 calendar.render();
 
-// filtros dinámicos
+// filtros
 document.querySelectorAll('.filtro-estado, .filtro-prioridad').forEach(cb => {
-cb.addEventListener('change', function() {
-calendar.refetchEvents();
-});
+    cb.addEventListener('change', function() {
+        calendar.refetchEvents();
+    });
 });
 
-// cambio de año
+// año
 yearSelect.addEventListener('change', function() {
-calendar.gotoDate(this.value + "-01-01");
+    calendar.gotoDate(this.value + "-01-01");
 });
 
-// tooltip movimiento
+// tooltip
 document.addEventListener('mousemove', function(e) {
-tooltip.style.top = (e.pageY + 10) + "px";
-tooltip.style.left = (e.pageX + 10) + "px";
+    tooltip.style.top = (e.pageY + 10) + "px";
+    tooltip.style.left = (e.pageX + 10) + "px";
 });
 
 });

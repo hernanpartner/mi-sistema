@@ -6,68 +6,87 @@ Auth::verificar();
 
 header('Content-Type: application/json');
 
-$db = Database::conectar();
+try {
 
-$stmt = $db->query("
-    SELECT 
-        t.id,
-        t.titulo,
-        t.fecha_limite,
-        t.estado,
-        t.prioridad,
-        t.servicio_id,
-        u.nombre AS responsable,
-        s.codigo
-    FROM tareas t
-    JOIN servicios s ON t.servicio_id = s.id
-    LEFT JOIN usuarios u ON t.responsable_id = u.id
-");
+    $db = Database::conectar();
 
-$tareas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $db->query("
+        SELECT 
+            t.id,
+            t.titulo,
+            t.fecha_limite,
+            t.estado,
+            t.prioridad,
+            t.servicio_id,
+            u.nombre AS responsable,
+            s.codigo
+        FROM tareas t
+        LEFT JOIN servicios s ON t.servicio_id = s.id
+        LEFT JOIN usuarios u ON t.responsable_id = u.id
+    ");
 
-$eventos = [];
+    $tareas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-foreach ($tareas as $t) {
+    $eventos = [];
 
-    $hoy = date('Y-m-d');
-    $atrasado = ($t['estado'] != 'TERMINADO' && $t['fecha_limite'] < $hoy);
+    foreach ($tareas as $t) {
 
-    // colores por estado
-    if ($atrasado) {
-        $color = '#dc3545';
-    } else {
-        switch ($t['estado']) {
-            case 'PENDIENTE':
-                $color = '#6c757d';
-                break;
-            case 'EN PROCESO':
-                $color = '#0d6efd';
-                break;
-            case 'BLOQUEADO':
-                $color = '#fd7e14';
-                break;
-            case 'TERMINADO':
-                $color = '#198754';
-                break;
-            default:
-                $color = '#6c757d';
+        // 🔴 SI NO HAY FECHA → NO SE MUESTRA
+        if (empty($t['fecha_limite'])) {
+            continue;
         }
+
+        $hoy = date('Y-m-d');
+        $atrasado = ($t['estado'] != 'TERMINADO' && $t['fecha_limite'] < $hoy);
+
+        // colores
+        if ($atrasado) {
+            $color = '#dc3545';
+        } else {
+            switch ($t['estado']) {
+                case 'PENDIENTE':
+                    $color = '#6c757d';
+                    break;
+                case 'EN PROCESO':
+                    $color = '#0d6efd';
+                    break;
+                case 'BLOQUEADO':
+                    $color = '#fd7e14';
+                    break;
+                case 'TERMINADO':
+                    $color = '#198754';
+                    break;
+                default:
+                    $color = '#6c757d';
+            }
+        }
+
+        $codigo = $t['codigo'] ?? 'SIN-COD';
+
+        $eventos[] = [
+            'id'    => $t['id'],
+            'title' => "[".$codigo."] ".$t['titulo'],
+            'start' => date('Y-m-d', strtotime($t['fecha_limite'])),
+            'color' => $color,
+
+            'extendedProps' => [
+                'estado'       => $t['estado'],
+                'prioridad'    => $t['prioridad'],
+                'responsable'  => $t['responsable'],
+                'fecha'        => $t['fecha_limite'],
+                'servicio_id'  => $t['servicio_id']
+            ]
+        ];
     }
 
-    $eventos[] = [
-        'id'    => $t['servicio_id'],
-        'title' => "[".$t['codigo']."] ".$t['titulo'],
-        'start' => $t['fecha_limite'],
-        'color' => $color,
+    echo json_encode($eventos);
 
-        // 🔥 datos extra para tooltip
-        'extendedProps' => [
-            'estado'      => $t['estado'],
-            'prioridad'   => $t['prioridad'],
-            'responsable' => $t['responsable'],
-            'fecha'       => $t['fecha_limite']
-        ]
-    ];
+} catch (Exception $e) {
+
+    http_response_code(500);
+
+    echo json_encode([
+        'error' => true,
+        'mensaje' => $e->getMessage()
+    ]);
 }
-
-echo json_encode($eventos);
